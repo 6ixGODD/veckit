@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "veckit"
+version = "0.1.0"
+description = "Virtual Embryo Challenge (VEC) local scorer: score a submitted .h5ad against the T1/T2/T3 metric panels, offline, against reference files you supply."
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "numpy",
+    "scipy",
+    "anndata",
+    "scikit-learn",
+]
+
+[project.urls]
+Homepage = "https://github.com/aristoteleo/veckit"
+Challenge = "https://virtualembryo.ai"
+
+[project.scripts]
+veckit = "score_h5ad:main"
+
+[tool.setuptools]
+py-modules = ["score_h5ad", "veckit"]
+
+[tool.setuptools.packages.find]
+include = ["T1", "T2", "T3", "common"]
