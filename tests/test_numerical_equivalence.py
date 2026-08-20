@@ -20,8 +20,13 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import score_h5ad as _s                       # noqa: E402
-from legacy_reference import legacy_score_task1_v2, train_frozen_probe as legacy_train_probe  # noqa: E402
+from legacy_reference import (  # noqa: E402
+    legacy_score_task1_v2,
+    mmd_unbiased as legacy_mmd_unbiased,
+    train_frozen_probe as legacy_train_probe,
+)
 from _fixture import make_t1_fixture          # noqa: E402
+from common.core_metrics import mmd_unbiased  # noqa: E402
 
 # rounding granularity of each reported metric (the dict values are already rounded)
 _TOL = {
@@ -107,3 +112,17 @@ def test_multiple_seeds():
                           sparse.csr_matrix(ref), seed=seed)
         old = _legacy_scorer(pred, ct_p, true, ct_t, ref, seed=seed)
         _assert_close(new, old, f"seed={seed}")
+
+
+def test_mmd_matches_legacy_at_official_gene_scale():
+    """Sparse input must retain the released dense-PCA metric at Task 1 width."""
+    rng = np.random.default_rng(17)
+    true = rng.normal(size=(75, 32_285)).astype(np.float32)
+    pred = (true + rng.normal(scale=0.1, size=true.shape)).astype(np.float32)
+
+    expected = legacy_mmd_unbiased(pred, true, n=75, seed=3)
+    actual = mmd_unbiased(sparse.csr_matrix(pred), sparse.csr_matrix(true), n=75, seed=3)
+
+    assert round(actual, 5) == round(expected, 5), (
+        f"official-width MMD changed at reported precision: new={actual}, legacy={expected}"
+    )

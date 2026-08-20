@@ -304,11 +304,10 @@ def mmd_unbiased(pred_X, true_X, n=2000, n_pc=30, seed=0, scales=(0.25, 0.5, 1.0
     sit in the blind spot of a single kernel width. The PCA basis and the bandwidth are both properties of
     the target alone, identical for every submission.
 
-    Sparse-aware: the PCA is fit on the FULL `true_X` (the semantic fitting population is unchanged) via
-    sklearn's sparse-capable `auto` solver, so no full densification; the sampled rows are then transformed
-    directly from sparse. sklearn's `auto` selects the same randomized solver for dense and sparse inputs at
-    this shape, and the components agree to ~1e-13 (measured), so this is numerically equivalent to the old
-    dense path.
+    The PCA is fit on a dense copy of the FULL `true_X`, preserving the released metric's solver selection
+    and numerical semantics. This is one unavoidable transient allocation: sklearn's `auto` selects ARPACK
+    for sparse input but may select the full or randomized solver for dense input, and those bases diverge at
+    the official 32,285-gene scale. Only the sampled rows are transformed afterward, directly from sparse.
 
     Still note the residual limitation, which no bandwidth mixture fixes: PCA to `n_pc` components is a
     linear projection, so any structure in the discarded subspace is invisible. Use `energy_distance` below
@@ -317,7 +316,7 @@ def mmd_unbiased(pred_X, true_X, n=2000, n_pc=30, seed=0, scales=(0.25, 0.5, 1.0
     from sklearn.decomposition import PCA
     from sklearn.metrics.pairwise import rbf_kernel
     rng = np.random.default_rng(seed)
-    pca = PCA(n_components=min(n_pc, true_X.shape[1]), random_state=0).fit(true_X)
+    pca = PCA(n_components=min(n_pc, true_X.shape[1]), random_state=0).fit(to_dense(true_X))
     pa = rng.choice(pred_X.shape[0], min(n, pred_X.shape[0]), replace=False)
     pb = rng.choice(true_X.shape[0], min(n, true_X.shape[0]), replace=False)
     A = pca.transform(pred_X[pa])
