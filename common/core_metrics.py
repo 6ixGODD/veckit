@@ -435,8 +435,8 @@ def variance_ratio(pred_X, true_X):
     equal to the copy floor and `delta_pearson` exactly 1.0; anything far below ~0.1 here means the
     submission is not a population and its mean-based metrics should not be read as if it were.
 
-    Sparse uses Var = E[X^2] - E[X]^2 via two O(nnz) reductions (no densification); dense keeps numpy's
-    np.var. Verified numerically consistent with the old `to_dense(X).var(0)`.
+    Sparse uses Var = E[X^2] - E[X]^2 via two O(nnz) reductions (no densification). Both paths accumulate
+    in float64 so identical values score consistently regardless of storage format.
     """
     va = _mean_gene_variance(pred_X); vb = _mean_gene_variance(true_X)
     return float(va / vb) if vb > 0 else float("nan")
@@ -449,7 +449,7 @@ def _mean_gene_variance(X):
         mean_sq = np.asarray(Xf.multiply(Xf).mean(axis=0)).ravel()
         var = mean_sq - mean ** 2
         return float(var.mean())
-    return float(X.var(axis=0).mean())   # dense: float32 var, matches legacy np.var; no float64 copy
+    return float(np.asarray(X, dtype=np.float64).var(axis=0).mean())
 
 
 # ---------------------------------------------------------------- aggregation

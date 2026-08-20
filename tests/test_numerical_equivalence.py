@@ -26,7 +26,7 @@ from legacy_reference import (  # noqa: E402
     train_frozen_probe as legacy_train_probe,
 )
 from _fixture import make_t1_fixture          # noqa: E402
-from common.core_metrics import mmd_unbiased  # noqa: E402
+from common.core_metrics import _mean_gene_variance, mmd_unbiased  # noqa: E402
 
 # rounding granularity of each reported metric (the dict values are already rounded)
 _TOL = {
@@ -126,3 +126,13 @@ def test_mmd_matches_legacy_at_official_gene_scale():
     assert round(actual, 5) == round(expected, 5), (
         f"official-width MMD changed at reported precision: new={actual}, legacy={expected}"
     )
+
+
+def test_variance_is_storage_format_independent():
+    rng = np.random.default_rng(23)
+    dense = rng.lognormal(size=(150, 500)).astype(np.float32)
+
+    sparse_value = _mean_gene_variance(sparse.csr_matrix(dense))
+    dense_value = _mean_gene_variance(dense)
+
+    np.testing.assert_allclose(sparse_value, dense_value, rtol=1e-12, atol=1e-12)
